@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardware Performance Calculator</title>
+    <style>
+        :root {
+            --bg-primary: #080808;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #121212;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --text-accent: #00ffff;
+            --border-color: #333333;
+            --accent-gold: #ffd700;
+            --accent-cyan: #00ffff;
+            --accent-orange: #ff8c00;
+            --error: #ff4444;
+            --success: #44ff44;
+            --warning: #ffaa00;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        /* Game-specific themes */
+        body.game-ark {
+            --bg-primary: #2F1B14;
+            --bg-secondary: #3D2819;
+            --bg-tertiary: #4A3521;
+            --text-accent: #8B4513;
+            --accent-gold: #DAA520;
+            --accent-cyan: #228B22;
+            --accent-orange: #A0522D;
+            background: linear-gradient(135deg, #2F1B14, #4A3521);
+        }
+
+        body.game-ark .game-card.ark {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+        }
+
+        body.game-fortnite {
+            --bg-primary: #0F1419;
+            --bg-secondary: #1A2332;
+            --bg-tertiary: #2A3441;
+            --text-accent: #1E90FF;
+            --accent-gold: #FFD700;
+            --accent-cyan: #9370DB;
+            --accent-orange: #FF6347;
+            background: linear-gradient(135deg, #0F1419, #2A3441);
+        }
+
+        body.game-fortnite .game-card.fortnite {
+            background: linear-gradient(135deg, #1E90FF, #9370DB);
+        }
+
+        body.game-rocket {
+            --bg-primary: #1A1A2E;
+            --bg-secondary: #16213E;
+            --bg-tertiary: #0F3460;
+            --text-accent: #E94560;
+            --accent-gold: #FFD700;
+            --accent-cyan: #00BFFF;
+            --accent-orange: #FF4500;
+            background: linear-gradient(135deg, #1A1A2E, #0F3460);
+        }
+
+        body.game-rocket .game-card.rocket {
+            background: linear-gradient(135deg, #E94560, #FF4500);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-mono);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-gold);
+        }
+
+        /* Portal Screen */
+        #portal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, var(--bg-primary), var(--bg-tertiary));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 1s ease-in-out;
+            overflow: hidden;
+        }
+
+        #portal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255,255,255,0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        #portal h1 {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px var(--accent-cyan);
+        }
+
+        .game-select {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .game-card {
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .game-card:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px var(--accent-cyan);
+            transform: translateY(-5px);
+        }
+
+        .game-card.ark:hover {
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 20px var(--accent-gold);
+        }
+
+        .game-card.fortnite:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px var(--accent-cyan);
+        }
+
+        .game-card.rocket:hover {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 20px var(--accent-orange);
+        }
+
+        .game-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .game-card p {
+            color: var(--text-secondary);
+        }
+
+        /* Dashboard */
+        #dashboard {
+            display: none;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #dashboard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .header {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            color: var(--accent-cyan);
+        }
+
+        .back-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .main-content {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .left-panel {
+            width: 50%;
+            padding: 1rem;
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+        }
+
+        .right-panel {
+            width: 50%;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .config-section {
+            margin-bottom: 2rem;
+        }
+
+        .config-section h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .hardware-select {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .ram-select {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="number"] {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .select-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .select-group label {
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .resolution-select {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .resolution-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .resolution-btn.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .resolution-btn:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        .run-diagnostic {
+            background: var(--accent-cyan);
+            border: none;
+            color: var(--bg-primary);
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .run-diagnostic:hover {
+            background: var(--accent-gold);
+        }
+
+        .run-diagnostic:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Terminal */
+        .terminal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            flex: 1;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .terminal::before {
+            content: '>';
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            color: var(--text-accent);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .terminal-line {
+            margin-bottom: 0.5rem;
+        }
+
+        .terminal-line.timestamp {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .terminal-line.info {
+            color: var(--text-primary);
+        }
+
+        .terminal-line.success {
+            color: var(--success);
+        }
+
+        .terminal-line.warning {
+            color: var(--warning);
+        }
+
+        .terminal-line.error {
+            color: var(--error);
+        }
+
+        .terminal-line.accent {
+            color: var(--accent-cyan);
+        }
+
+        /* FPS Display */
+        .fps-display {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .fps-display h4 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .fps-gauge {
+            margin-bottom: 1rem;
+        }
+
+        .fps-number {
+            font-size: 4rem;
+            font-weight: bold;
+            color: var(--text-accent);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 10px var(--text-accent);
+            transition: color 0.3s ease;
+        }
+
+        .fps-bar {
+            height: 20px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .fps-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--warning), var(--error));
+            transition: width 0.5s ease;
+        }
+
+        .fps-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        #fps-status {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .bottleneck-meter h4 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+        }
+
+        .meter-bar {
+            height: 20px;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .meter-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .meter-fill.cpu {
+            background: linear-gradient(90deg, var(--success), var(--warning));
+        }
+
+        .meter-fill.gpu {
+            background: linear-gradient(90deg, var(--warning), var(--error));
+        }
+
+        .meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Config Output */
+        .config-output {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-top: 1rem;
+            overflow-x: auto;
+        }
+
+        .config-output h4 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+        }
+
+        .config-block {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+        }
+
+        .preset-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .preset-tab {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .preset-tab.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+        }
+
+        .preset-tab:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        /* Scanning Overlay */
+        .scanning-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .scanning-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .scanning-content {
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-cyan);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            animation: scan 2s infinite linear;
+        }
+
+        @keyframes scan {
+            0% { box-shadow: 0 0 20px var(--accent-cyan); }
+            50% { box-shadow: 0 0 40px var(--accent-cyan); }
+            100% { box-shadow: 0 0 20px var(--accent-cyan); }
+        }
+
+        .scanning-content h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+        }
+
+        .scanning-content p {
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .left-panel, .right-panel {
+                width: 100%;
+                height: 50%;
+            }
+
+            .game-select {
+                flex-direction: column;
+            }
+
+            .hardware-select {
+                grid-template-columns: 1fr;
+            }
+
+            .ram-select {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="portal">
+        <h1>Hardware Performance Calculator</h1>
+        <div class="game-select">
+            <div class="game-card ark" data-game="ark">
+                <h3>ARK: Survival Ascended</h3>
+                <p>UE5 Survival Game</p>
+            </div>
+            <div class="game-card fortnite" data-game="fortnite">
+                <h3>Fortnite</h3>
+                <p>Battle Royale</p>
+            </div>
+            <div class="game-card rocket" data-game="rocket">
+                <h3>Rocket League</h3>
+                <p>Soccer with Cars</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div class="header">
+            <h2 id="game-title">Select a Game</h2>
+            <button class="back-btn" onclick="System.backToPortal()">Back to Portal</button>
+        </div>
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="config-section">
+                    <h3>Hardware Configuration</h3>
+                    <div class="hardware-select">
+                        <div class="select-group">
+                            <label for="cpu-brand">CPU Brand</label>
+                            <select id="cpu-brand">
+                                <option value="">Select Brand</option>
+                                <option value="AMD">AMD</option>
+                                <option value="Intel">Intel</option>
+                            </select>
+                        </div>
+                        <div class="select-group">
+                            <label for="cpu-series">CPU Series</label>
+                            <select id="cpu-series">
+                                <option value="">Select Series</option>
+                            </select>
+                        </div>
+                        <div class="select-group">
+                            <label for="cpu-model">CPU Model</label>
+                            <select id="cpu-model">
+                                <option value="">Select Model</option>
+                            </select>
+                        </div>
+                        <div class="select-group">
+                            <label for="gpu-brand">GPU Brand</label>
+                            <select id="gpu-brand">
+                                <option value="">Select Brand</option>
+                                <option value="AMD">AMD</option>
+                                <option value="NVIDIA">NVIDIA</option>
+                                <option value="Intel">Intel</option>
+                            </select>
+                        </div>
+                        <div class="select-group">
+                            <label for="gpu-series">GPU Series</label>
+                            <select id="gpu-series">
+                                <option value="">Select Series</option>
+                            </select>
+                        </div>
+                        <div class="select-group">
+                            <label for="gpu-model">GPU Model</label>
+                            <select id="gpu-model">
+                                <option value="">Select Model</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-section">
+                        <h3>Memory Configuration</h3>
+                        <div class="ram-select">
+                            <div class="select-group">
+                                <label for="ram-size">RAM Size (GB)</label>
+                                <input type="number" id="ram-size" min="4" max="256" value="16" step="4">
+                            </div>
+                            <div class="select-group">
+                                <label for="ram-type">RAM Type</label>
+                                <select id="ram-type">
+                                    <option value="DDR4">DDR4</option>
+                                    <option value="DDR5">DDR5</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="config-section">
+                        <h3>Resolution</h3>
+                        <div class="resolution-select">
+                            <button class="resolution-btn active" data-res="1080p">1080p</button>
+                            <button class="resolution-btn" data-res="1440p">1440p</button>
+                            <button class="resolution-btn" data-res="4k">4K</button>
+                        </div>
+                    </div>
+                    <button class="run-diagnostic" id="run-btn" onclick="System.runDiagnostic()">Run Diagnostic</button>
+                </div>
+            </div>
+            <div class="right-panel">
+                <div class="fps-display">
+                    <h4>Estimated FPS</h4>
+                    <div class="fps-gauge">
+                        <div class="fps-number" id="fps-number">--</div>
+                        <div class="fps-bar">
+                            <div class="fps-fill" id="fps-fill"></div>
+                        </div>
+                        <div class="fps-labels">
+                            <span>Low</span>
+                            <span>High</span>
+                        </div>
+                    </div>
+                    <p id="fps-status">Run diagnostic to calculate FPS</p>
+                </div>
+                <div class="bottleneck-meter">
+                    <h4>Bottleneck Analysis</h4>
+                    <div class="meter-bar">
+                        <div class="meter-fill cpu" id="cpu-meter" style="width: 0%"></div>
+                    </div>
+                    <div class="meter-labels">
+                        <span>CPU Bottleneck</span>
+                        <span>GPU Bottleneck</span>
+                    </div>
+                    <p id="bottleneck-status">Select hardware and run diagnostic</p>
+                </div>
+                <div class="terminal" id="terminal">
+                    <div class="terminal-line timestamp">[SYSTEM] Hardware Performance Calculator v2.0 Initialized</div>
+                    <div class="terminal-line info">[SYSTEM] Select a game from the portal to begin</div>
+                </div>
+                <div class="config-output">
+                    <h4>Recommended Settings</h4>
+                    <div class="preset-tabs">
+                        <button class="preset-tab active" data-preset="survival">Survival/Low</button>
+                        <button class="preset-tab" data-preset="balanced">Balanced</button>
+                        <button class="preset-tab" data-preset="epic">Epic</button>
+                    </div>
+                    <div class="config-block" id="config-block">
+                        Select hardware and run diagnostic to generate configs
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="scanning-overlay" id="scanning-overlay">
+        <div class="scanning-content">
+            <h3>Scanning Hardware...</h3>
+            <p>Analyzing performance metrics</p>
+        </div>
+    </div>
+
+    <script>
+        // --- KERNEL INITIALIZATION ---
+        const System = {
+            currentGame: null,
+            hardware: {
+                cpus: {
+                    AMD: {
+                        "Ryzen 1000": {
+                            "AMD Ryzen 5 1600": 250,
+                            "AMD Ryzen 7 1700": 280
+                        },
+                        "Ryzen 2000": {
+                            "AMD Ryzen 5 2600": 270,
+                            "AMD Ryzen 7 2700": 300
+                        },
+                        "Ryzen 3000": {
+                            "AMD Ryzen 5 3600": 320,
+                            "AMD Ryzen 7 3700X": 380,
+                            "AMD Ryzen 9 3900X": 450
+                        },
+                        "Ryzen 5000": {
+                            "AMD Ryzen 5 5600": 340,
+                            "AMD Ryzen 5 5600X": 360,
+                            "AMD Ryzen 7 5700X": 400,
+                            "AMD Ryzen 7 5800X": 420,
+                            "AMD Ryzen 9 5900X": 480,
+                            "AMD Ryzen 9 5950X": 520
+                        },
+                        "Ryzen 7000": {
+                            "AMD Ryzen 5 7600": 380,
+                            "AMD Ryzen 7 7700X": 440,
+                            "AMD Ryzen 9 7900X": 500,
+                            "AMD Ryzen 9 7950X": 550
+                        },
+                        "Ryzen 9000": {
+                            "AMD Ryzen 9 9600X": 480,
+                            "AMD Ryzen 9 9700X": 520,
+                            "AMD Ryzen 9 9900X": 560,
+                            "AMD Ryzen 9 9950X": 600
+                        }
+                    },
+                    Intel: {
+                        "8th Gen": {
+                            "Intel Core i5-8400": 260,
+                            "Intel Core i7-8700K": 340
+                        },
+                        "9th Gen": {
+                            "Intel Core i5-9600K": 300,
+                            "Intel Core i7-9700K": 380
+                        },
+                        "10th Gen": {
+                            "Intel Core i5-10400": 320,
+                            "Intel Core i7-10700K": 400,
+                            "Intel Core i9-10900K": 460
+                        },
+                        "11th Gen": {
+                            "Intel Core i5-11400": 330,
+                            "Intel Core i7-11700K": 410,
+                            "Intel Core i9-11900K": 470
+                        },
+                        "12th Gen": {
+                            "Intel Core i5-12400": 350,
+                            "Intel Core i7-12700K": 430,
+                            "Intel Core i9-12900K": 490
+                        },
+                        "13th Gen": {
+                            "Intel Core i5-13400": 360,
+                            "Intel Core i7-13700K": 440,
+                            "Intel Core i9-13900K": 500
+                        },
+                        "14th Gen": {
+                            "Intel Core i5-14400": 370,
+                            "Intel Core i7-14700K": 450,
+                            "Intel Core i9-14900K": 510
+                        }
+                    }
+                },
+                gpus: {
+                    AMD: {
+                        "RX 500 Series": {
+                            "RX 570": 220,
+                            "RX 580": 240,
+                            "RX 590": 260
+                        },
+                        "RX 5000 Series": {
+                            "RX 5500 XT": 280,
+                            "RX 5600 XT": 320,
+                            "RX 5700": 340,
+                            "RX 5700 XT": 360
+                        },
+                        "RX 6000 Series": {
+                            "RX 6400": 200,
+                            "RX 6500 XT": 240,
+                            "RX 6600": 300,
+                            "RX 6600 XT": 320,
+                            "RX 6650 XT": 340,
+                            "RX 6700": 360,
+                            "RX 6700 XT": 380,
+                            "RX 6750 XT": 400,
+                            "RX 6800": 420,
+                            "RX 6800 XT": 440,
+                            "RX 6900 XT": 480,
+                            "RX 6950 XT": 500
+                        },
+                        "RX 7000 Series": {
+                            "RX 7600": 380,
+                            "RX 7600 XT": 400,
+                            "RX 7700 XT": 440,
+                            "RX 7800 XT": 480,
+                            "RX 7900 GRE": 460,
+                            "RX 7900 XT": 500,
+                            "RX 7900 XTX": 520
+                        },
+                        "RX 9000 Series": {
+                            "RX 9060": 420,
+                            "RX 9060 XT": 440,
+                            "RX 9070 GRE": 480,
+                            "RX 9070": 500,
+                            "RX 9070 XT": 520
+                        }
+                    },
+                    NVIDIA: {
+                        "GTX 10 Series": {
+                            "GTX 1050 Ti": 180,
+                            "GTX 1060": 220,
+                            "GTX 1070": 280,
+                            "GTX 1070 Ti": 300,
+                            "GTX 1080": 320,
+                            "GTX 1080 Ti": 340
+                        },
+                        "GTX 16 Series": {
+                            "GTX 1650": 200,
+                            "GTX 1650 Super": 220,
+                            "GTX 1660": 240,
+                            "GTX 1660 Super": 260,
+                            "GTX 1660 Ti": 280
+                        },
+                        "RTX 20 Series": {
+                            "RTX 2060": 320,
+                            "RTX 2060 Super": 340,
+                            "RTX 2070": 360,
+                            "RTX 2070 Super": 380,
+                            "RTX 2080": 400,
+                            "RTX 2080 Super": 420,
+                            "RTX 2080 Ti": 440
+                        },
+                        "RTX 30 Series": {
+                            "RTX 3050": 300,
+                            "RTX 3060": 380,
+                            "RTX 3060 Ti": 420,
+                            "RTX 3070": 480,
+                            "RTX 3070 Ti": 520,
+                            "RTX 3080": 580,
+                            "RTX 3080 Ti": 620,
+                            "RTX 3090": 660,
+                            "RTX 3090 Ti": 700
+                        },
+                        "RTX 40 Series": {
+                            "RTX 4060": 420,
+                            "RTX 4060 Ti": 460,
+                            "RTX 4070": 520,
+                            "RTX 4070 Super": 560,
+                            "RTX 4070 Ti": 600,
+                            "RTX 4080": 680,
+                            "RTX 4080 Super": 720,
+                            "RTX 4090": 800
+                        },
+                        "RTX 50 Series": {
+                            "RTX 5050": 500,
+                            "RTX 5060": 540,
+                            "RTX 5060 Ti": 580,
+                            "RTX 5070": 620,
+                            "RTX 5070 Ti": 660,
+                            "RTX 5080": 720,
+                            "RTX 5090": 800
+                        }
+                    },
+                    Intel: {
+                        "Arc Series": {
+                            "Arc A380": 200,
+                            "Arc A580": 280,
+                            "Arc A750": 360,
+                            "Arc A770": 400
+                        }
+                    }
+                }
+            },
+            gameMultipliers: {
+                ark: { base: 0.3, scaling: 0.8, qualityMult: { survival: 1.0, balanced: 0.85, epic: 0.7 } },
+                fortnite: { base: 0.8, scaling: 1.2, qualityMult: { survival: 1.0, balanced: 0.9, epic: 0.75 } },
+                rocket: { base: 1.2, scaling: 1.5, qualityMult: { survival: 1.0, balanced: 0.95, epic: 0.8 } }
+            },
+            resolutionMultipliers: {
+                "1080p": 1.0,
+                "1440p": 0.7,
+                "4k": 0.4
+            },
+            selectedResolution: "1080p",
+            selectedCPU: null,
+            selectedGPU: null,
+            selectedRAMSize: 16,
+            selectedRAMType: "DDR4",
+            currentPreset: "survival",
+
+            // --- SYSTEM LOGGING MODULE ---
+            log: function(message, type = 'info') {
+                const terminal = document.getElementById('terminal');
+                const timestamp = new Date().toLocaleTimeString();
+                const line = document.createElement('div');
+                line.className = `terminal-line ${type}`;
+                line.innerHTML = `[${timestamp}] ${message}`;
+                terminal.appendChild(line);
+                terminal.scrollTop = terminal.scrollHeight;
+            },
+
+            // --- HARDWARE SYNCHRONIZATION MODULE ---
+            syncHardware: function() {
+                // CPU and GPU selects are now cascading, no initial population
+                this.log('Hardware selection interface initialized', 'success');
+            },
+
+            // --- CASCADE POPULATION MODULES ---
+            populateCPUSeries: function(brand) {
+                const seriesSelect = document.getElementById('cpu-series');
+                seriesSelect.innerHTML = '<option value="">Select Series</option>';
+                if (brand && this.hardware.cpus[brand]) {
+                    for (const series in this.hardware.cpus[brand]) {
+                        const option = document.createElement('option');
+                        option.value = series;
+                        option.textContent = series;
+                        seriesSelect.appendChild(option);
+                    }
+                }
+                document.getElementById('cpu-model').innerHTML = '<option value="">Select Model</option>';
+            },
+
+            populateCPUModels: function(brand, series) {
+                const modelSelect = document.getElementById('cpu-model');
+                modelSelect.innerHTML = '<option value="">Select Model</option>';
+                if (brand && series && this.hardware.cpus[brand][series]) {
+                    for (const model in this.hardware.cpus[brand][series]) {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        modelSelect.appendChild(option);
+                    }
+                }
+            },
+
+            populateGPUSeries: function(brand) {
+                const seriesSelect = document.getElementById('gpu-series');
+                seriesSelect.innerHTML = '<option value="">Select Series</option>';
+                if (brand && this.hardware.gpus[brand]) {
+                    for (const series in this.hardware.gpus[brand]) {
+                        const option = document.createElement('option');
+                        option.value = series;
+                        option.textContent = series;
+                        seriesSelect.appendChild(option);
+                    }
+                }
+                document.getElementById('gpu-model').innerHTML = '<option value="">Select Model</option>';
+            },
+
+            populateGPUModels: function(brand, series) {
+                const modelSelect = document.getElementById('gpu-model');
+                modelSelect.innerHTML = '<option value="">Select Model</option>';
+                if (brand && series && this.hardware.gpus[brand][series]) {
+                    for (const model in this.hardware.gpus[brand][series]) {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        modelSelect.appendChild(option);
+                    }
+                }
+            },
+
+            // --- PERFORMANCE CALCULATION ENGINE ---
+            calculate: function() {
+                if (!this.selectedCPU || !this.selectedGPU) {
+                    this.log('Hardware selection incomplete', 'error');
+                    return null;
+                }
+
+                // Get scores from nested structure
+                let cpuScore = 0;
+                let gpuScore = 0;
+                for (const brand in this.hardware.cpus) {
+                    for (const series in this.hardware.cpus[brand]) {
+                        if (this.hardware.cpus[brand][series][this.selectedCPU]) {
+                            cpuScore = this.hardware.cpus[brand][series][this.selectedCPU];
+                            break;
+                        }
+                    }
+                    if (cpuScore) break;
+                }
+                for (const brand in this.hardware.gpus) {
+                    for (const series in this.hardware.gpus[brand]) {
+                        if (this.hardware.gpus[brand][series][this.selectedGPU]) {
+                            gpuScore = this.hardware.gpus[brand][series][this.selectedGPU];
+                            break;
+                        }
+                    }
+                    if (gpuScore) break;
+                }
+
+                const ramScore = this.selectedRAMSize * (this.selectedRAMType === 'DDR5' ? 1.2 : 1.0);
+                const gameMult = this.gameMultipliers[this.currentGame];
+                const resMult = this.resolutionMultipliers[this.selectedResolution];
+                const qualityMult = gameMult.qualityMult[this.currentPreset];
+
+                // Base FPS calculation with RAM and quality influence
+                let baseFPS = Math.min(cpuScore, gpuScore) * gameMult.base * resMult * (ramScore / 32) * qualityMult; // Normalize RAM impact
+
+                // Apply scaling based on hardware balance
+                const hardwareRatio = Math.min(cpuScore, gpuScore) / Math.max(cpuScore, gpuScore);
+                baseFPS *= (1 + hardwareRatio * gameMult.scaling);
+
+                // Clamp FPS to reasonable ranges
+                const minFPS = this.currentGame === 'ark' ? 20 : this.currentGame === 'fortnite' ? 60 : 120;
+                const maxFPS = this.currentGame === 'ark' ? 120 : this.currentGame === 'fortnite' ? 240 : 360;
+
+                const finalFPS = Math.max(minFPS, Math.min(maxFPS, Math.round(baseFPS)));
+
+                this.log(`Calculated FPS: ${finalFPS} at ${this.selectedResolution}`, 'accent');
+
+                return {
+                    fps: finalFPS,
+                    cpuScore: cpuScore,
+                    gpuScore: gpuScore,
+                    ramScore: ramScore,
+                    bottleneck: this.analyzeBottleneck(cpuScore, gpuScore, ramScore)
+                };
+            },
+
+            // --- BOTTLENECK ANALYSIS MODULE ---
+            analyzeBottleneck: function(cpuScore, gpuScore, ramScore) {
+                const ratio = cpuScore / gpuScore;
+                let bottleneck = 'Balanced';
+                if (ratio < 0.7) {
+                    bottleneck = 'GPU Bottleneck';
+                } else if (ratio > 1.3) {
+                    bottleneck = 'CPU Bottleneck';
+                }
+                if (ramScore < 24) {
+                    bottleneck += ' + RAM Limited';
+                }
+                return bottleneck;
+            },
+
+            // --- CONFIGURATION GENERATION MODULE ---
+            generateConfig: function(preset) {
+                const configs = {
+                    survival: {
+                        ark: `[Graphics]
+Resolution=1920x1080
+Quality=Low
+AntiAliasing=Off
+Shadows=Low
+Textures=Medium
+Effects=Low
+ViewDistance=Medium
+
+[Performance]
+FPSLimit=60
+VSync=Off
+FrameRateSmoothing=On`,
+
+                        fortnite: `[Video]
+Resolution=1920x1080
+DisplayMode=Windowed
+FrameRateLimit=144
+Quality=Low
+ViewDistance=Low
+Shadows=Off
+AntiAliasing=Off
+Textures=Low
+Effects=Low
+PostProcessing=Low
+
+[Engine]
+bSmoothFrameRate=True
+MaxFPS=144`,
+
+                        rocket: `[VideoSettings]
+Resolution=1920x1080
+DisplayMode=Fullscreen
+MaxFPS=120
+VSync=0
+Quality=Low
+Bloom=0
+MotionBlur=0
+DepthOfField=0
+AmbientOcclusion=0
+
+[Network]
+PredictionTime=0.1`
+                    },
+
+                    balanced: {
+                        ark: `[Graphics]
+Resolution=1920x1080
+Quality=Medium
+AntiAliasing=FXAA
+Shadows=Medium
+Textures=High
+Effects=Medium
+ViewDistance=High
+
+[Performance]
+FPSLimit=75
+VSync=Off
+FrameRateSmoothing=On`,
+
+                        fortnite: `[Video]
+Resolution=1920x1080
+DisplayMode=Fullscreen
+FrameRateLimit=144
+Quality=Medium
+ViewDistance=Medium
+Shadows=Medium
+AntiAliasing=Temporal
+Textures=Medium
+Effects=Medium
+PostProcessing=Medium
+
+[Engine]
+bSmoothFrameRate=True
+MaxFPS=144`,
+
+                        rocket: `[VideoSettings]
+Resolution=1920x1080
+DisplayMode=Fullscreen
+MaxFPS=144
+VSync=0
+Quality=Medium
+Bloom=1
+MotionBlur=0
+DepthOfField=0
+AmbientOcclusion=1
+
+[Network]
+PredictionTime=0.08`
+                    },
+
+                    epic: {
+                        ark: `[Graphics]
+Resolution=1920x1080
+Quality=Epic
+AntiAliasing=TAA
+Shadows=Epic
+Textures=Epic
+Effects=Epic
+ViewDistance=Epic
+
+[Performance]
+FPSLimit=90
+VSync=Off
+FrameRateSmoothing=On`,
+
+                        fortnite: `[Video]
+Resolution=1920x1080
+DisplayMode=Fullscreen
+FrameRateLimit=240
+Quality=Epic
+ViewDistance=Epic
+Shadows=Epic
+AntiAliasing=Temporal
+Textures=Epic
+Effects=Epic
+PostProcessing=Epic
+
+[Engine]
+bSmoothFrameRate=True
+MaxFPS=240`,
+
+                        rocket: `[VideoSettings]
+Resolution=1920x1080
+DisplayMode=Fullscreen
+MaxFPS=360
+VSync=0
+Quality=Epic
+Bloom=1
+MotionBlur=1
+DepthOfField=1
+AmbientOcclusion=2
+
+[Network]
+PredictionTime=0.05`
+                    }
+                };
+
+                return configs[preset][this.currentGame] || 'Configuration not available';
+            },
+
+            // --- DIAGNOSTIC EXECUTION MODULE ---
+            runDiagnostic: function() {
+                this.selectedCPU = document.getElementById('cpu-model').value;
+                this.selectedGPU = document.getElementById('gpu-model').value;
+                this.selectedRAMSize = parseInt(document.getElementById('ram-size').value);
+                this.selectedRAMType = document.getElementById('ram-type').value;
+
+                if (!this.selectedCPU || !this.selectedGPU) {
+                    this.log('Please select CPU and GPU models', 'error');
+                    return;
+                }
+
+                // Show scanning overlay
+                document.getElementById('scanning-overlay').classList.add('active');
+
+                this.log('Initializing diagnostic sequence...', 'accent');
+                this.log(`Selected CPU: ${this.selectedCPU}`, 'info');
+                this.log(`Selected GPU: ${this.selectedGPU}`, 'info');
+                this.log(`Memory: ${this.selectedRAMSize}GB ${this.selectedRAMType}`, 'info');
+                this.log(`Target Resolution: ${this.selectedResolution}`, 'info');
+
+                setTimeout(() => {
+                    const result = this.calculate();
+                    if (result) {
+                        this.log(`Diagnostic complete. Estimated FPS: ${result.fps}`, 'success');
+                        this.updateFPSDisplay(result.fps);
+                        this.updateBottleneckMeter(result.bottleneck, result.cpuScore, result.gpuScore);
+                        this.updateConfigOutput();
+                    }
+
+                    // Hide scanning overlay
+                    document.getElementById('scanning-overlay').classList.remove('active');
+                }, 2000);
+            },
+
+            // --- UI UPDATE MODULES ---
+            updateFPSDisplay: function(fps) {
+                const fpsNumber = document.getElementById('fps-number');
+                const fpsFill = document.getElementById('fps-fill');
+                const fpsStatus = document.getElementById('fps-status');
+
+                fpsNumber.textContent = fps || '--';
+                if (fps) {
+                    // Calculate fill percentage based on game max FPS
+                    const maxFPS = this.currentGame === 'ark' ? 120 : this.currentGame === 'fortnite' ? 240 : 360;
+                    const fillPercent = Math.min(100, (fps / maxFPS) * 100);
+                    fpsFill.style.width = `${fillPercent}%`;
+
+                    let status = 'Optimal';
+                    if (fps < 30) status = 'Very Low';
+                    else if (fps < 60) status = 'Low';
+                    else if (fps < 120) status = 'Good';
+                    else status = 'Excellent';
+
+                    fpsStatus.textContent = `Performance: ${status}`;
+                    const root = document.documentElement;
+                    fpsStatus.style.color = fps < 30 ? getComputedStyle(root).getPropertyValue('--error').trim() : 
+                                             fps < 60 ? getComputedStyle(root).getPropertyValue('--warning').trim() : 
+                                             getComputedStyle(root).getPropertyValue('--success').trim();
+                } else {
+                    fpsFill.style.width = '0%';
+                    fpsStatus.textContent = 'Run diagnostic to calculate FPS';
+                }
+            },
+
+            updateBottleneckMeter: function(bottleneck, cpuScore, gpuScore) {
+                const cpuMeter = document.getElementById('cpu-meter');
+                const status = document.getElementById('bottleneck-status');
+
+                let cpuWidth = 50;
+                if (bottleneck === 'GPU Bottleneck') {
+                    cpuWidth = 30;
+                } else if (bottleneck === 'CPU Bottleneck') {
+                    cpuWidth = 70;
+                }
+
+                cpuMeter.style.width = `${cpuWidth}%`;
+
+                status.textContent = `Status: ${bottleneck}`;
+                status.style.color = bottleneck === 'Balanced' ? 'var(--success)' : 'var(--warning)';
+            },
+
+            updateConfigOutput: function() {
+                const configBlock = document.getElementById('config-block');
+                configBlock.textContent = this.generateConfig(this.currentPreset);
+            },
+
+            // --- NAVIGATION MODULE ---
+            backToPortal: function() {
+                document.body.className = '';
+                document.getElementById('portal').style.display = 'flex';
+                document.getElementById('dashboard').style.display = 'none';
+                this.currentGame = null;
+                this.updateFPSDisplay(null);
+                this.log('Returned to portal', 'info');
+            },
+
+            // --- INITIALIZATION SEQUENCE ---
+            init: function() {
+                this.log('System initialization complete', 'success');
+                this.setupEventListeners();
+            },
+
+            // --- EVENT HANDLER SETUP ---
+            setupEventListeners: function() {
+                // Game selection
+                document.querySelectorAll('.game-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        const game = e.currentTarget.dataset.game;
+                        this.selectGame(game);
+                    });
+                });
+
+                // Resolution selection
+                document.querySelectorAll('.resolution-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.resolution-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.selectedResolution = e.target.dataset.res;
+                        this.log(`Resolution changed to ${this.selectedResolution}`, 'info');
+                    });
+                });
+
+                // Preset tabs
+                document.querySelectorAll('.preset-tab').forEach(tab => {
+                    tab.addEventListener('click', (e) => {
+                        document.querySelectorAll('.preset-tab').forEach(t => t.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.currentPreset = e.target.dataset.preset;
+                        this.updateConfigOutput();
+                        // Recalculate FPS for new preset
+                        if (this.selectedCPU && this.selectedGPU) {
+                            const result = this.calculate();
+                            if (result) {
+                                this.updateFPSDisplay(result.fps);
+                                this.log(`FPS updated for ${this.currentPreset} preset: ${result.fps}`, 'info');
+                            }
+                        }
+                    });
+                });
+
+                // CPU cascading selects
+                document.getElementById('cpu-brand').addEventListener('change', (e) => {
+                    this.populateCPUSeries(e.target.value);
+                    this.selectedCPU = null;
+                });
+                document.getElementById('cpu-series').addEventListener('change', (e) => {
+                    this.populateCPUModels(document.getElementById('cpu-brand').value, e.target.value);
+                    this.selectedCPU = null;
+                });
+                document.getElementById('cpu-model').addEventListener('change', (e) => {
+                    this.selectedCPU = e.target.value;
+                    this.log(`CPU selected: ${this.selectedCPU}`, 'info');
+                });
+
+                // GPU cascading selects
+                document.getElementById('gpu-brand').addEventListener('change', (e) => {
+                    this.populateGPUSeries(e.target.value);
+                    this.selectedGPU = null;
+                });
+                document.getElementById('gpu-series').addEventListener('change', (e) => {
+                    this.populateGPUModels(document.getElementById('gpu-brand').value, e.target.value);
+                    this.selectedGPU = null;
+                });
+                document.getElementById('gpu-model').addEventListener('change', (e) => {
+                    this.selectedGPU = e.target.value;
+                    this.log(`GPU selected: ${this.selectedGPU}`, 'info');
+                });
+
+                // RAM inputs
+                document.getElementById('ram-size').addEventListener('input', (e) => {
+                    this.selectedRAMSize = parseInt(e.target.value);
+                    this.log(`RAM size changed to ${this.selectedRAMSize}GB`, 'info');
+                });
+                document.getElementById('ram-type').addEventListener('change', (e) => {
+                    this.selectedRAMType = e.target.value;
+                    this.log(`RAM type changed to ${this.selectedRAMType}`, 'info');
+                });
+            },
+
+            // --- GAME SELECTION MODULE ---
+            selectGame: function(game) {
+                this.currentGame = game;
+                document.body.className = `game-${game}`;
+                document.getElementById('portal').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+
+                const titles = {
+                    ark: 'ARK: Survival Ascended',
+                    fortnite: 'Fortnite',
+                    rocket: 'Rocket League'
+                };
+
+                document.getElementById('game-title').textContent = titles[game];
+                this.syncHardware();
+                this.log(`Game selected: ${titles[game]}`, 'accent');
+                this.log('Hardware database loaded', 'success');
+            }
+        };
+
+        // --- SYSTEM BOOT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            System.init();
+        });
+    </script>
+</body>
+</html>
